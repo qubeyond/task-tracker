@@ -55,6 +55,8 @@ app.get('/api/tasks', requireAuth, taskController.getAll);             // Read (
 app.get('/api/tasks/:id', requireAuth, taskController.getById);         // Read by ID (Появился)
 app.put('/api/tasks/:id/status', requireAuth, taskController.updateStatus); // Update status (Был)
 app.delete('/api/tasks/:id', requireAuth, taskController.deleteTask);    // Delete (Появился)
+app.post('/api/tasks/:taskId/subtasks', requireAuth, taskController.addSubtask);
+app.put('/api/subtasks/:subtaskId', requireAuth, taskController.toggleSubtask);
 
 app.listen(PORT, () => {
     console.log(`=== [Server] Трекер задач успешно запущен на порту ${PORT} ===`);

@@ -2,8 +2,11 @@
 @baseUrl = http://localhost:8000/api
 
 
+### =========================================================================
+### БЛОК 1. ВАШИ ИСХОДНЫЕ БАЗОВЫЕ ТЕСТЫ (ПРОСТЫЕ ЗАДАЧИ)
+### =========================================================================
+
 ### 1. Авторизация (Вход) — Инициализируем сессию
-# Сначала выполняем этот шаг, чтобы получить сессионную куку
 POST {{baseUrl}}/auth/login
 Content-Type: application/json
 
@@ -12,9 +15,7 @@ Content-Type: application/json
     "password": "super_secure_password_2026"
 }
 
-
 ### 2. CRUD: CREATE — Создание новой задачи
-# Отправляем post-запрос на создание первой задачи
 POST {{baseUrl}}/tasks
 Content-Type: application/json
 
@@ -23,21 +24,15 @@ Content-Type: application/json
     "description": "Исправить конфигурацию пула соединений БД и проверить сетевые имена контейнеров."
 }
 
-
 ### 3. CRUD: READ — Получение списка всех задач пользователя
-# Теперь этот запрос должен вернуть массив с одной созданной задачей
 GET {{baseUrl}}/tasks
 Content-Type: application/json
 
-
 ### 4. CRUD: READ (by ID) — Получение конкретной задачи
-# Если у первой созданной задачи ID = 1, то запрос вернет её детали
 GET {{baseUrl}}/tasks/1
 Content-Type: application/json
 
-
 ### 5. CRUD: UPDATE — Изменение статуса задачи
-# Переводим задачу в статус выполненной
 PUT {{baseUrl}}/tasks/1/status
 Content-Type: application/json
 
@@ -45,13 +40,117 @@ Content-Type: application/json
     "status": "DONE"
 }
 
-
 ### 6. CRUD: DELETE — Удаление задачи
-# Проверяем удаление объекта из базы данных по его ID
 DELETE {{baseUrl}}/tasks/1
 Content-Type: application/json
 
 
-### 7. Финал: Выход из системы (Разрыв сессии)
+### =========================================================================
+### БЛОК 2. ИНТЕГРАЦИОННЫЙ СЦЕНАРИЙ ДЛЯ КОМПЛЕКСНЫХ ЗАДАЧ (ПОЛИМОРФИЗМ)
+### =========================================================================
+# Этот блок тестирует сквозную бизнес-логику: создание комплексной задачи, 
+# блокировку закрытия при невыполненных подзадачах, их выполнение и успешное закрытие.
+
+### Шаг 1. Создание комплексной задачи
+# @name createComplexTask
+POST {{baseUrl}}/tasks
+Content-Type: application/json
+
+{
+    "title": "Релиз новой версии API",
+    "description": "Собрать и протестировать бэкенд перед деплоем",
+    "type": "COMPLEX"
+}
+
+### Извлекаем ID созданной комплексной задачи из ответа выше
+@complexTaskId = {{createComplexTask.response.body.$.data.id}}
+
+
+### Шаг 2. Добавление первой подзадачи к созданной задаче
+# @name subtask1
+POST {{baseUrl}}/tasks/{{complexTaskId}}/subtasks
+Content-Type: application/json
+
+{
+    "title": "Покрыть тестами контроллеры"
+}
+
+### Извлекаем ID первой подзадачи
+@subtask1Id = {{subtask1.response.body.$.data.id}}
+
+
+### Шаг 3. Добавление второй подзадачи
+# @name subtask2
+POST {{baseUrl}}/tasks/{{complexTaskId}}/subtasks
+Content-Type: application/json
+
+{
+    "title": "Проверить утечки памяти пула соединений"
+}
+
+### Извлекаем ID второй подзадачи
+@subtask2Id = {{subtask2.response.body.$.data.id}}
+
+
+### Шаг 4. ПРОВЕРКА БИЗНЕС-ПРАВИЛА (Ожидаем ошибку 400 Bad Request)
+# Пытаемся закрыть комплексную задачу, когда обе подзадачи открыты.
+# Метод task.canBeClosed() должен вернуть false, и репозиторий выбросит Error.
+PUT {{baseUrl}}/tasks/{{complexTaskId}}/status
+Content-Type: application/json
+
+{
+    "status": "DONE"
+}
+
+
+### Шаг 5. Выполнение первой подзадачи
+PUT {{baseUrl}}/subtasks/{{subtask1Id}}
+Content-Type: application/json
+
+{
+    "isCompleted": true
+}
+
+
+### Шаг 6. ПРОВЕРКА БИЗНЕС-ПРАВИЛА (Ожидаем ошибку 400 Bad Request)
+# Первая подзадача выполнена, но вторая все еще открыта. Закрытие должно быть заблокировано.
+PUT {{baseUrl}}/tasks/{{complexTaskId}}/status
+Content-Type: application/json
+
+{
+    "status": "DONE"
+}
+
+
+### Шаг 7. Выполнение второй подзадачи (Последней)
+PUT {{baseUrl}}/subtasks/{{subtask2Id}}
+Content-Type: application/json
+
+{
+    "isCompleted": true
+}
+
+
+### Шаг 8. Повторная попытка закрытия задачи (Ожидаем успех 200 OK)
+# Теперь, когда все подзадачи выполнены, canBeClosed() вернет true и статус обновится.
+PUT {{baseUrl}}/tasks/{{complexTaskId}}/status
+Content-Type: application/json
+
+{
+    "status": "DONE"
+}
+
+
+### Шаг 9. Очистка данных: Удаление комплексной задачи
+# Проверяем каскадное удаление. Удаление родительской задачи должно удалить и подзадачи.
+DELETE {{baseUrl}}/tasks/{{complexTaskId}}
+Content-Type: application/json
+
+
+### =========================================================================
+### БЛОК 3. ЗАВЕРШЕНИЕ РАБОТЫ
+### =========================================================================
+
+### Финал: Выход из системы (Разрыв сессии)
 POST {{baseUrl}}/auth/logout
 Content-Type: application/json

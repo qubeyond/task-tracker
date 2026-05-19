@@ -130,4 +130,37 @@ export class TaskRepository {
         const { rowCount } = await pool.query(query, [id]);
         return (rowCount ?? 0) > 0;
     }
+
+    public async createSubtask(taskId: number, title: string): Promise<SubTask> {
+        // 1. Проверяем существование и тип родительской задачи
+        const checkQuery = 'SELECT type FROM tasks WHERE id = $1';
+        const { rows: checkRows } = await pool.query(checkQuery, [taskId]);
+
+        if (checkRows.length === 0) {
+            throw new Error('Родительская задача не найдена.');
+        }
+
+        if (checkRows[0].type !== 'COMPLEX') {
+            throw new Error('Невозможно добавить подзадачу: тип родительской задачи должен быть COMPLEX.');
+        }
+
+        // 2. Вставляем подзадачу
+        const insertQuery = `
+            INSERT INTO subtasks (title, is_completed, task_id)
+            VALUES ($1, FALSE, $2)
+            RETURNING id, title, is_completed as "isCompleted";
+        `;
+        const { rows } = await pool.query(insertQuery, [title, taskId]);
+        return rows[0];
+    }
+
+    public async updateSubtaskStatus(subtaskId: number, isCompleted: boolean): Promise<boolean> {
+        const query = `
+            UPDATE subtasks 
+            SET is_completed = $1 
+            WHERE id = $2
+        `;
+        const { rowCount } = await pool.query(query, [isCompleted, subtaskId]);
+        return (rowCount ?? 0) > 0;
+    }
 }

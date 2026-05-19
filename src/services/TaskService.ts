@@ -1,7 +1,7 @@
 // src/services/TaskService.ts
 
 import { TaskRepository } from '../repositories/TaskRepository.js';
-import { Task, TaskStatus } from '../domain/Task.js';
+import { Task, SubTask, TaskStatus } from '../domain/Task.js'; // Добавлен импорт TaskStatus
 
 export class TaskService {
     private taskRepository = new TaskRepository();
@@ -28,5 +28,13 @@ export class TaskService {
 
     public async deleteTask(taskId: number): Promise<boolean> {
         return this.taskRepository.delete(taskId);
+    }
+
+    public async addSubtask(taskId: number, title: string): Promise<SubTask> {
+        return this.taskRepository.createSubtask(taskId, title);
+    }
+
+    public async toggleSubtask(subtaskId: number, isCompleted: boolean): Promise<boolean> {
+        return this.taskRepository.updateSubtaskStatus(subtaskId, isCompleted);
     }
 }

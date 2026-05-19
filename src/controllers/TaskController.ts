@@ -136,4 +136,68 @@ export class TaskController {
             res.status(500).json({ status: 'error', message: error.message });
         }
     };
+
+    public addSubtask = async (req: Request, res: Response): Promise<void> => {
+        try {
+            const { taskId } = req.params;
+            const { title } = req.body;
+
+            if (!taskId || !title) {
+                res.status(400).json({ status: 'error', message: 'ID задачи и название подзадачи обязательны.' });
+                return;
+            }
+
+            // Явное приведение к string для удовлетворения компилятора (Строка 150)
+            const parentTaskId = parseInt(taskId as string, 10);
+            if (isNaN(parentTaskId)) {
+                res.status(400).json({ status: 'error', message: 'Неверный формат ID родительской задачи.' });
+                return;
+            }
+
+            const subtask = await this.taskService.addSubtask(parentTaskId, title);
+            res.status(201).json({
+                status: 'success',
+                data: subtask
+            });
+        } catch (error: any) {
+            res.status(400).json({ status: 'error', message: error.message });
+        }
+    };
+
+    public toggleSubtask = async (req: Request, res: Response): Promise<void> => {
+        try {
+            const { subtaskId } = req.params;
+            const { isCompleted } = req.body;
+
+            if (isCompleted === undefined) {
+                res.status(400).json({ status: 'error', message: 'Статус выполнения (isCompleted) обязателен.' });
+                return;
+            }
+
+            if (!subtaskId) {
+                res.status(400).json({ status: 'error', message: 'Идентификатор подзадачи не указан.' });
+                return;
+            }
+
+            // Явное приведение к string для безопасного парсинга (Строка 176)
+            const id = parseInt(subtaskId as string, 10);
+            if (isNaN(id)) {
+                res.status(400).json({ status: 'error', message: 'Неверный формат ID подзадачи.' });
+                return;
+            }
+
+            const success = await this.taskService.toggleSubtask(id, !!isCompleted);
+            if (!success) {
+                res.status(404).json({ status: 'error', message: 'Подзадача не найдена.' });
+                return;
+            }
+
+            res.status(200).json({
+                status: 'success',
+                message: 'Статус подзадачи успешно изменен.'
+            });
+        } catch (error: any) {
+            res.status(500).json({ status: 'error', message: error.message });
+        }
+    };
 }
