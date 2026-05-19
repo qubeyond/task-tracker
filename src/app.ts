@@ -6,13 +6,14 @@ import dotenv from 'dotenv';
 import { AuthController } from './controllers/AuthController.js';
 import { TaskController } from './controllers/TaskController.js';
 import { requireAuth } from './middleware/auth.js';
+import { validateBody, authSchema, createTaskSchema, updateStatusSchema, createSubtaskSchema } from './middleware/validation.js';
 
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 8000;
 
-// Middleware для парсинга JSON
+// Стандартный и легковесный парсинг входящих данных
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -41,21 +42,20 @@ app.get('/', (_req, res) => {
     });
 });
 
-// Маршруты аутентификации (Auth)
-app.post('/api/auth/register', authController.register);
-app.post('/api/auth/login', authController.login);
+// Маршруты аутентификации (Auth) с валидацией входных данных
+app.post('/api/auth/register', validateBody(authSchema), authController.register);
+app.post('/api/auth/login', validateBody(authSchema), authController.login);
 app.post('/api/auth/logout', authController.logout);
 
-// Маршруты задач (Защищены middleware requireAuth)
+// Маршруты задач (Защищены middleware requireAuth и валидацией DTO)
+app.post('/api/tasks', requireAuth, validateBody(createTaskSchema), taskController.create);
 app.get('/api/tasks', requireAuth, taskController.getAll);
-app.put('/api/tasks/:id/status', requireAuth, taskController.updateStatus);
-// Маршруты задач (Защищены middleware requireAuth)
-app.post('/api/tasks', requireAuth, taskController.create);             // Сreate (Появился)
-app.get('/api/tasks', requireAuth, taskController.getAll);             // Read (Был)
-app.get('/api/tasks/:id', requireAuth, taskController.getById);         // Read by ID (Появился)
-app.put('/api/tasks/:id/status', requireAuth, taskController.updateStatus); // Update status (Был)
-app.delete('/api/tasks/:id', requireAuth, taskController.deleteTask);    // Delete (Появился)
-app.post('/api/tasks/:taskId/subtasks', requireAuth, taskController.addSubtask);
+app.get('/api/tasks/:id', requireAuth, taskController.getById);
+app.put('/api/tasks/:id/status', requireAuth, validateBody(updateStatusSchema), taskController.updateStatus);
+app.delete('/api/tasks/:id', requireAuth, taskController.deleteTask);
+
+// Маршруты подзадач с валидацией
+app.post('/api/tasks/:taskId/subtasks', requireAuth, validateBody(createSubtaskSchema), taskController.addSubtask);
 app.put('/api/subtasks/:subtaskId', requireAuth, taskController.toggleSubtask);
 
 app.listen(PORT, () => {

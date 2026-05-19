@@ -1,156 +1,204 @@
-### Переменные окружения для тестирования
 @baseUrl = http://localhost:8000/api
 
 
 ### =========================================================================
-### БЛОК 1. ВАШИ ИСХОДНЫЕ БАЗОВЫЕ ТЕСТЫ (ПРОСТЫЕ ЗАДАЧИ)
+### БЛОК 1. ТЕСТИРОВАНИЕ ПРОСТЫХ ЗАДАЧ (CRUD)
 ### =========================================================================
 
-### 1. Авторизация (Вход) — Инициализируем сессию
+### 1. Вход в систему
 POST {{baseUrl}}/auth/login
 Content-Type: application/json
 
 {
-    "username": "vyach_developer",
-    "password": "super_secure_password_2026"
+  "username": "vyach_developer",
+  "password": "super_secure_password_2026"
 }
 
-### 2. CRUD: CREATE — Создание новой задачи
+### 2. Создание простой задачи
+# @name createSimpleTask
 POST {{baseUrl}}/tasks
 Content-Type: application/json
 
 {
-    "title": "Развернуть бэкенд в Docker",
-    "description": "Исправить конфигурацию пула соединений БД и проверить сетевые имена контейнеров."
+  "title": "Развернуть бэкенд в Docker",
+  "description": "Исправить конфигурацию пула соединений БД."
 }
 
-### 3. CRUD: READ — Получение списка всех задач пользователя
+### 3. Получение переменной ID простой задачи
+@simpleTaskId = {{createSimpleTask.response.body.data.id}}
+
+### 4. Получение списка всех задач
 GET {{baseUrl}}/tasks
 Content-Type: application/json
 
-### 4. CRUD: READ (by ID) — Получение конкретной задачи
-GET {{baseUrl}}/tasks/1
+### 5. Получение задачи по ID
+GET {{baseUrl}}/tasks/{{simpleTaskId}}
 Content-Type: application/json
 
-### 5. CRUD: UPDATE — Изменение статуса задачи
-PUT {{baseUrl}}/tasks/1/status
+### 6. Изменение статуса задачи на DONE
+PUT {{baseUrl}}/tasks/{{simpleTaskId}}/status
 Content-Type: application/json
 
 {
-    "status": "DONE"
+  "status": "DONE"
 }
 
-### 6. CRUD: DELETE — Удаление задачи
-DELETE {{baseUrl}}/tasks/1
+### 7. Удаление задачи
+DELETE {{baseUrl}}/tasks/{{simpleTaskId}}
+Content-Type: application/json
+
+### 8. Выход из системы
+POST {{baseUrl}}/auth/logout
 Content-Type: application/json
 
 
 ### =========================================================================
-### БЛОК 2. ИНТЕГРАЦИОННЫЙ СЦЕНАРИЙ ДЛЯ КОМПЛЕКСНЫХ ЗАДАЧ (ПОЛИМОРФИЗМ)
+### БЛОК 2. ИНТЕГРАЦИОННЫЙ СЦЕНАРИЙ ДЛЯ КОМПЛЕКСНЫХ ЗАДАЧ
 ### =========================================================================
-# Этот блок тестирует сквозную бизнес-логику: создание комплексной задачи, 
-# блокировку закрытия при невыполненных подзадачах, их выполнение и успешное закрытие.
 
-### Шаг 1. Создание комплексной задачи
+### 1. Вход в систему
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "username": "vyach_developer",
+  "password": "super_secure_password_2026"
+}
+
+### 2. Создание комплексной задачи
 # @name createComplexTask
 POST {{baseUrl}}/tasks
 Content-Type: application/json
 
 {
-    "title": "Релиз новой версии API",
-    "description": "Собрать и протестировать бэкенд перед деплоем",
-    "type": "COMPLEX"
+  "title": "Релиз новой версии API",
+  "description": "Собрать и протестировать бэкенд перед деплоем",
+  "type": "COMPLEX"
 }
 
-### Извлекаем ID созданной комплексной задачи из ответа выше
-@complexTaskId = {{createComplexTask.response.body.$.data.id}}
+### 3. Получение переменной ID комплексной задачи
+@complexTaskId = {{createComplexTask.response.body.data.id}}
 
-
-### Шаг 2. Добавление первой подзадачи к созданной задаче
+### 4. Добавление первой подзадачи
 # @name subtask1
 POST {{baseUrl}}/tasks/{{complexTaskId}}/subtasks
 Content-Type: application/json
 
 {
-    "title": "Покрыть тестами контроллеры"
+  "title": "Покрыть тестами контроллеры"
 }
 
-### Извлекаем ID первой подзадачи
-@subtask1Id = {{subtask1.response.body.$.data.id}}
+### 5. Получение переменной ID первой подзадачи
+@subtask1Id = {{subtask1.response.body.data.id}}
 
-
-### Шаг 3. Добавление второй подзадачи
+### 6. Добавление второй подзадачи
 # @name subtask2
 POST {{baseUrl}}/tasks/{{complexTaskId}}/subtasks
 Content-Type: application/json
 
 {
-    "title": "Проверить утечки памяти пула соединений"
+  "title": "Проверить утечки памяти пула соединений"
 }
 
-### Извлекаем ID второй подзадачи
-@subtask2Id = {{subtask2.response.body.$.data.id}}
+### 7. Получение переменной ID второй подзадачи
+@subtask2Id = {{subtask2.response.body.data.id}}
 
-
-### Шаг 4. ПРОВЕРКА БИЗНЕС-ПРАВИЛА (Ожидаем ошибку 400 Bad Request)
-# Пытаемся закрыть комплексную задачу, когда обе подзадачи открыты.
-# Метод task.canBeClosed() должен вернуть false, и репозиторий выбросит Error.
+### 8. Блокировка закрытия при двух открытых подзадачах (Ожидаем 400)
 PUT {{baseUrl}}/tasks/{{complexTaskId}}/status
 Content-Type: application/json
 
 {
-    "status": "DONE"
+  "status": "DONE"
 }
 
-
-### Шаг 5. Выполнение первой подзадачи
+### 9. Выполнение первой подзадачи
 PUT {{baseUrl}}/subtasks/{{subtask1Id}}
 Content-Type: application/json
 
 {
-    "isCompleted": true
+  "isCompleted": true
 }
 
-
-### Шаг 6. ПРОВЕРКА БИЗНЕС-ПРАВИЛА (Ожидаем ошибку 400 Bad Request)
-# Первая подзадача выполнена, но вторая все еще открыта. Закрытие должно быть заблокировано.
+### 10. Блокировка закрытия при одной открытой подзадаче (Ожидаем 400)
 PUT {{baseUrl}}/tasks/{{complexTaskId}}/status
 Content-Type: application/json
 
 {
-    "status": "DONE"
+  "status": "DONE"
 }
 
-
-### Шаг 7. Выполнение второй подзадачи (Последней)
+### 11. Выполнение второй подзадачи
 PUT {{baseUrl}}/subtasks/{{subtask2Id}}
 Content-Type: application/json
 
 {
-    "isCompleted": true
+  "isCompleted": true
 }
 
-
-### Шаг 8. Повторная попытка закрытия задачи (Ожидаем успех 200 OK)
-# Теперь, когда все подзадачи выполнены, canBeClosed() вернет true и статус обновится.
+### 12. Успешное закрытие задачи после выполнения всех подзадач (Ожидаем 200)
 PUT {{baseUrl}}/tasks/{{complexTaskId}}/status
 Content-Type: application/json
 
 {
-    "status": "DONE"
+  "status": "DONE"
 }
 
-
-### Шаг 9. Очистка данных: Удаление комплексной задачи
-# Проверяем каскадное удаление. Удаление родительской задачи должно удалить и подзадачи.
+### 13. Удаление комплексной задачи и подзадач
 DELETE {{baseUrl}}/tasks/{{complexTaskId}}
+Content-Type: application/json
+
+### 14. Выход из системы
+POST {{baseUrl}}/auth/logout
 Content-Type: application/json
 
 
 ### =========================================================================
-### БЛОК 3. ЗАВЕРШЕНИЕ РАБОТЫ
+### БЛОК 3. ТЕСТИРОВАНИЕ ВАЛИДАЦИИ ДАННЫХ (ZOD)
 ### =========================================================================
 
-### Финал: Выход из системы (Разрыв сессии)
+### 1. Вход в систему
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "username": "vyach_developer",
+  "password": "super_secure_password_2026"
+}
+
+### 2. Ошибка: Создание задачи с пустым названием (Ожидаем 400)
+POST {{baseUrl}}/tasks
+Content-Type: application/json
+
+{
+  "title": "",
+  "description": "Тест пустой строки"
+}
+
+### 3. Ошибка: Передача некорректного типа задачи (Ожидаем 400)
+POST {{baseUrl}}/tasks
+Content-Type: application/json
+
+{
+  "title": "Невалидный тип",
+  "type": "INVALID_TYPE"
+}
+
+### 4. Ошибка: Передача некорректного статуса задачи (Ожидаем 400)
+PUT {{baseUrl}}/tasks/9999/status
+Content-Type: application/json
+
+{
+  "status": "NOT_STARTED"
+}
+
+### 5. Ошибка: Создание подзадачи с превышением длины названия (Ожидаем 400)
+POST {{baseUrl}}/tasks/1/subtasks
+Content-Type: application/json
+
+{
+  "title": "Очень длинное название подзадачи... Очень длинное название подзадачи... Очень длинное название подзадачи... Очень длинное название подзадачи... Очень длинное название подзадачи... Очень длинное название подзадачи... Очень длинное название подзадачи... Очень длинное название подзадачи..."
+}
+
+### 6. Выход из системы
 POST {{baseUrl}}/auth/logout
 Content-Type: application/json
