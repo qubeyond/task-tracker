@@ -1,0 +1,57 @@
+### Переменные окружения для тестирования
+@baseUrl = http://localhost:8000/api
+
+
+### 1. Авторизация (Вход) — Инициализируем сессию
+# Сначала выполняем этот шаг, чтобы получить сессионную куку
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+    "username": "vyach_developer",
+    "password": "super_secure_password_2026"
+}
+
+
+### 2. CRUD: CREATE — Создание новой задачи
+# Отправляем post-запрос на создание первой задачи
+POST {{baseUrl}}/tasks
+Content-Type: application/json
+
+{
+    "title": "Развернуть бэкенд в Docker",
+    "description": "Исправить конфигурацию пула соединений БД и проверить сетевые имена контейнеров."
+}
+
+
+### 3. CRUD: READ — Получение списка всех задач пользователя
+# Теперь этот запрос должен вернуть массив с одной созданной задачей
+GET {{baseUrl}}/tasks
+Content-Type: application/json
+
+
+### 4. CRUD: READ (by ID) — Получение конкретной задачи
+# Если у первой созданной задачи ID = 1, то запрос вернет её детали
+GET {{baseUrl}}/tasks/1
+Content-Type: application/json
+
+
+### 5. CRUD: UPDATE — Изменение статуса задачи
+# Переводим задачу в статус выполненной
+PUT {{baseUrl}}/tasks/1/status
+Content-Type: application/json
+
+{
+    "status": "DONE"
+}
+
+
+### 6. CRUD: DELETE — Удаление задачи
+# Проверяем удаление объекта из базы данных по его ID
+DELETE {{baseUrl}}/tasks/1
+Content-Type: application/json
+
+
+### 7. Финал: Выход из системы (Разрыв сессии)
+POST {{baseUrl}}/auth/logout
+Content-Type: application/json

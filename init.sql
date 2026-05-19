@@ -1,3 +1,5 @@
+-- init.sql
+
 -- 1. Таблица пользователей для регистрации и сессий
 CREATE TABLE users (
     id SERIAL PRIMARY KEY,
@@ -6,47 +8,33 @@ CREATE TABLE users (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- 2. Базовая таблица задач (содержит общие для всех типов поля)
+-- 2. Базовая таблица задач с дискриминатором типа (SIMPLE / COMPLEX)
 CREATE TABLE tasks (
     id SERIAL PRIMARY KEY,
     title VARCHAR(255) NOT NULL,
-    project VARCHAR(255) NOT NULL,
-    task_type VARCHAR(20) NOT NULL, -- Дискриминатор: 'bug', 'feature', 'doc'
-    priority VARCHAR(20) NOT NULL,   -- низкий, средний, высокий, критический
-    status VARCHAR(20) NOT NULL DEFAULT 'открыта', -- в работе, на проверке, закрыта
-    assignee VARCHAR(255) DEFAULT 'не назначен',
-    created_at DATE NOT NULL DEFAULT CURRENT_DATE,
-    deadline DATE NOT NULL,
-    closed_at DATE,                 -- Заполняется при переводе в статус 'закрыта'
-    creator_id INT REFERENCES users(id) ON DELETE SET NULL
+    description TEXT,
+    status VARCHAR(20) NOT NULL DEFAULT 'OPEN', -- 'OPEN', 'IN_PROGRESS', 'DONE'
+    type VARCHAR(20) NOT NULL DEFAULT 'SIMPLE', -- 'SIMPLE', 'COMPLEX'
+    user_id INT REFERENCES users(id) ON DELETE CASCADE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- 3. Таблица-наследник для Багов (BugTask)
-CREATE TABLE bug_tasks (
-    task_id INT PRIMARY KEY REFERENCES tasks(id) ON DELETE CASCADE,
-    severity VARCHAR(20) NOT NULL, -- блокирующая, критическая, минорная
-    system_module VARCHAR(100) NOT NULL,
-    target_version VARCHAR(50) NOT NULL
+-- 3. Таблица подзадач для комплексных задач (Связь один-ко-многим)
+CREATE TABLE subtasks (
+    id SERIAL PRIMARY KEY,
+    task_id INT REFERENCES tasks(id) ON DELETE CASCADE,
+    title VARCHAR(255) NOT NULL,
+    is_completed BOOLEAN NOT NULL DEFAULT FALSE
 );
 
--- 4. Таблица-наследник для Фич (FeatureTask)
-CREATE TABLE feature_tasks (
-    task_id INT PRIMARY KEY REFERENCES tasks(id) ON DELETE CASCADE,
-    functional_block VARCHAR(100) NOT NULL,
-    estimation_hours INT NOT NULL,
-    customer_priority INT NOT NULL
-);
+-- 4. БЕЗОПАСНОСТЬ: Создание изолированного пользователя приложения
+-- Проверяем, существует ли пользователь, чтобы избежать ошибок при перезапуске
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT FROM pg_catalog.pg_user WHERE usename = 'task_app_user') THEN
+        CREATE USER task_app_user WITH PASSWORD 'app_secure_password_2026';
+    END IF;
+END $$;
 
--- 5. Таблица-наследник для Документации (DocTask)
-CREATE TABLE doc_tasks (
-    task_id INT PRIMARY KEY REFERENCES tasks(id) ON DELETE CASCADE,
-    doc_type VARCHAR(100) NOT NULL, -- спецификация, руководство, API
-    target_audience VARCHAR(100) NOT NULL,
-    completion_percentage INT NOT NULL CHECK (completion_percentage BETWEEN 0 AND 100)
-);
-
--- 6. БЕЗОПАСНОСТЬ: Создание изолированного пользователя приложения
--- Приложение будет ходить в базу НЕ под рутом (postgres_admin), а под юзером с ограниченными правами
-CREATE USER task_app_user WITH PASSWORD 'app_secure_password_2026';
 GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO task_app_user;
 GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO task_app_user;
