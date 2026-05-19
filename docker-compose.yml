@@ -1,0 +1,35 @@
+services:
+  # Контейнер базы данных
+  db:
+    image: postgres:15-alpine
+    container_name: task_tracker_db
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - "5432:5432"
+    volumes:
+      # Проброс папки для сохранения данных базы на диске Linux
+      - pgdata:/var/lib/postgresql/data
+      # Маппинг скрипта инициализации (выполнится ОДИН РАЗ при первом старте базы)
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+
+  # Контейнер нашего Node.js приложения
+  web:
+    build: .
+    container_name: task_tracker_web
+    restart: always
+    ports:
+      - "8000:8000"
+    environment:
+      - PORT=${PORT}
+      - SESSION_SECRET=${SESSION_SECRET}
+      - DATABASE_URL=${DATABASE_URL}
+    # Ждем, пока контейнер базы данных успешно поднимется
+    depends_on:
+      - db
+
+volumes:
+  pgdata:

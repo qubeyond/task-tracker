@@ -1,0 +1,36 @@
+{
+    "compilerOptions": {
+        /* Раскладка файлов */
+        "rootDir": "./src",
+        "outDir": "./dist",
+        /* Настройки окружения */
+        "module": "NodeNext",
+        "moduleResolution": "NodeNext",
+        "target": "ES2022",
+        "lib": [
+            "ES2022"
+        ],
+        /* Вывод дебаг-информации */
+        "sourceMap": true,
+        "declaration": true,
+        "declarationMap": true,
+        /* Строгая проверка типов */
+        "strict": true,
+        "noUncheckedIndexedAccess": true,
+        "exactOptionalPropertyTypes": true,
+        "isolatedModules": true,
+        "skipLibCheck": true,
+        /* Стилистические опции для чистого кода */
+        "noImplicitOverride": true,
+        "noUnusedLocals": true,
+        "noUnusedParameters": true
+    },
+    "include": [
+        "src/**/*"
+    ],
+    /* Настройка для бесшовного запуска TypeScript-файлов через ts-node */
+    "ts-node": {
+        "esm": true,
+        "experimentalSpecifierResolution": "node"
+    }
+}

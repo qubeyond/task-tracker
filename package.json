@@ -1,0 +1,30 @@
+{
+    "name": "task-tracker",
+    "version": "1.0.0",
+    "description": "Система контроля проектных задач",
+    "type": "module",
+    "main": "dist/app.js",
+    "scripts": {
+        "dev": "node --loader ts-node/esm src/app.ts",
+        "build": "tsc",
+        "start": "node dist/app.js"
+    },
+    "keywords": [],
+    "author": "",
+    "license": "ISC",
+    "dependencies": {
+        "dotenv": "^17.4.2",
+        "ejs": "^3.1.10",
+        "express": "^5.2.1",
+        "express-session": "^1.19.0",
+        "pg": "^8.21.0"
+    },
+    "devDependencies": {
+        "@types/express": "^5.0.6",
+        "@types/express-session": "^1.19.0",
+        "@types/node": "^25.9.0",
+        "@types/pg": "^8.20.0",
+        "ts-node": "^10.9.2",
+        "typescript": "^6.0.3"
+    }
+}
